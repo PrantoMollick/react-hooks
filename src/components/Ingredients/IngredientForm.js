@@ -10,6 +10,12 @@ const IngredientForm = React.memo((props) => {
   const submitHandler = (event) => {
     event.preventDefault();
     // ...
+    if (enteredTitle.trim().length === 0 || enteredAmount.trim().length === 0) {
+      //throw error
+      return;
+    }
+
+    props.onAddIngredient({ title: enteredTitle, amount: enteredAmount });
   };
 
   return (
