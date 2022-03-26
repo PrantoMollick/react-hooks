@@ -7,50 +7,46 @@ import Search from './Search';
 import useHttp from '../../utils/http';
 
 const ingredientReducer = (currentIngredients, action) => {
-  switch(action.type) {
-    case 'SET': 
+  switch (action.type) {
+    case 'SET':
       return action.ingredients;
     case 'ADD':
       return [...currentIngredients, action.ingredient];
     case 'DELETE':
-      return currentIngredients.filter(ing => ing.id !== action.id );
+      return currentIngredients.filter((ing) => ing.id !== action.id);
     default:
       throw new Error('Should not get there!');
   }
 };
 
-
 function Ingredients() {
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
-  const {isLoading, error, data, sendRequest} = useHttp();
+  const { isLoading, error, data, sendRequest, reqExtra, reqIdentifer, clear }=useHttp();
 
   useEffect(() => {
-    console.log('RENDERING INGREDIENTS', userIngredients);
-  }, [userIngredients]);
+    if (!isLoading && !error && reqIdentifer === 'REMOVE_INGREDIENT') {
+      dispatch({ type: 'DELETE', id: reqExtra });
+    } else if (!isLoading && !error && reqIdentifer === 'ADD_INGREDIENT') {
+      dispatch({
+        type: 'ADD',
+        ingredient: { id: data.name, ...reqExtra },
+      });
+    }
+  }, [data, reqExtra, reqIdentifer, isLoading, error]);
 
-  const addIngredienthandler = useCallback((ingredient) => {
-    // dispatchHttp({type: 'SEND'})
-    // fetch(
-    //   'https://react-hooks-update-6efe2-default-rtdb.firebaseio.com/ingredients.json',
-    //   {
-    //     method: 'POST',
-    //     body: JSON.stringify(ingredient),
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //     },
-    //   }
-    // )
-    //   .then((response) => {
-    //     dispatchHttp({type: 'RESPONSE'})
-    //     return response.json();
-    //   })
-    //   .then((responseData) => {
-    //     dispatch({
-    //       type: 'ADD',
-    //       ingredient: { id: responseData.name, ...ingredient },
-    //     });
-    //   });
-  }, []);
+  const addIngredienthandler = useCallback(
+    (ingredient) => {
+      const body = JSON.stringify(ingredient);
+      sendRequest(
+        'https://react-hooks-update-6efe2-default-rtdb.firebaseio.com/ingredients.json',
+        'POST',
+        body,
+        ingredient,
+        'ADD_INGREDIENT'
+      );
+    },
+    [sendRequest]
+  );
 
   const filterIngredientsHandler = useCallback((filterIngredientText) => {
     dispatch({ type: 'SET', ingredients: filterIngredientText });
@@ -60,27 +56,28 @@ function Ingredients() {
     (ingredientId) => {
       sendRequest(
         `https://react-hooks-update-6efe2-default-rtdb.firebaseio.com/ingredients/${ingredientId}.json`,
-        'DELETE'
+        'DELETE',
+        null,
+        ingredientId,
+        'REMOVE_INGREDIENT'
       );
     },
     [sendRequest]
   );
 
-  const clearError = useCallback( () => {
-    // dispatchHttp({type: 'ERROR'});
-  }, []);
-
 
   const ingredientList = useMemo(() => {
-    return <IngredientList
-      ingredients={userIngredients}
-      onRemoveItem={removeIngredientHandler}
-    />;
+    return (
+      <IngredientList
+        ingredients={userIngredients}
+        onRemoveItem={removeIngredientHandler}
+      />
+    );
   }, [userIngredients, removeIngredientHandler]);
 
   return (
     <div className='App'>
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+      {error && <ErrorModal onClose={clear}>{error}</ErrorModal>}
 
       <IngredientForm
         onAddIngredient={addIngredienthandler}
